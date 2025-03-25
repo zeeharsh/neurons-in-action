@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Neural Network Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: radial-gradient(circle, #0a0a0a, #000000); }
+    </style>
+</head>
+<body>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 2.0;
+
+        // Particle Background (Stars)
+        const particleGeometry = new THREE.BufferGeometry();
+        const particleCount = 3000;
+        const posArray = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount * 3; i++) posArray[i] = (Math.random() - 0.5) * 500;
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particleMaterial = new THREE.PointsMaterial({ size: 1, vertexColors: true });
+        const colors = [];
+        for (let i = 0; i < particleCount; i++) {
+            colors.push(Math.random(), Math.random(), Math.random());
+        }
+        particleGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // Neural Network Nodes with Unique Colors
+        const nodes = [];
+        const nodeGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+        for (let i = 0; i < 50; i++) {
+            let nodeMaterial = new THREE.MeshStandardMaterial({
+                emissive: new THREE.Color(Math.random(), Math.random(), Math.random()),
+                emissiveIntensity: 1.5
+            });
+            let node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+            node.position.set((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
+            nodes.push(node);
+            scene.add(node);
+        }
+
+        // Neural Network Edges with Glowing Effect
+        const edges = [];
+        for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+                if (Math.random() > 0.7) {
+                    let points = [nodes[i].position, nodes[j].position];
+                    let edgeGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                    let edgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+                    let edge = new THREE.Line(edgeGeometry, edgeMaterial);
+                    edges.push(edge);
+                    scene.add(edge);
+                }
+            }
+        }
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404040, 3);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 5, 100);
+        pointLight.position.set(20, 20, 20);
+        scene.add(pointLight);
+
+        // Camera Setup
+        camera.position.z = 60;
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            nodes.forEach(node => {
+                node.rotation.y += 0.01;
+            });
+            particles.rotation.y += 0.0008;
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Interactivity: Click to Highlight Connections
+        window.addEventListener('click', (event) => {
+            const mouse = new THREE.Vector2(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(nodes);
+            if (intersects.length > 0) {
+                const selectedNode = intersects[0].object;
+                selectedNode.material.emissive.set(0xffff00);
+                setTimeout(() => {
+                    selectedNode.material.emissive.set(new THREE.Color(Math.random(), Math.random(), Math.random()));
+                }, 1500);
+            }
+        });
+
+        // Responsive Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
